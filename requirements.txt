@@ -1,4 +1,3 @@
-docarray
 jina
 numpy
 pandas

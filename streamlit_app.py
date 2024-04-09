@@ -1,11 +1,5 @@
 import streamlit as st
-from PIL import Image
-from docarray import DocumentArray, Document
-import json
-import requests
-from jina import Client
-
-client = Client(host='grpcs://1f51c9f5b1.wolf.jina.ai')
+import pandas as pd
 st.title('CLIP Search demo')
 
 
@@ -42,24 +36,20 @@ def search(query_da):
     display_results(result)
 
 
-menu = ['Text', 'Image']
+menu = ['Keyword-Search', 'Semantic-Search']
 choice = st.sidebar.selectbox('Select The Input Modality: ', menu)
 
-if choice == 'Image':
-    st.subheader('Image-Image Search')
-    image_file = st.file_uploader('Upload Query Image', type=["png", "jpg", "jpeg"])
-
-    if image_file is not None:
-        img = image_file.getvalue()
-        st.image(Image.open(image_file), width=250)
-
-        query_da = DocumentArray([Document(text='query_img', blob=img)])
-
-elif choice == 'Text':
-    st.subheader('Text-Image Search')
+if choice == 'Keyword-Search':
+    st.subheader('Keyword-Search')
     query = st.text_input('Text Query', placeholder='Type your query here...')
 
-    query_da = DocumentArray([Document(text=query)])
+    query_da = query
+
+elif choice == 'Semantic-Search':
+    st.subheader('Semantic-Search')
+    query = st.text_input('Text Query', placeholder='Type your query here...')
+
+    query_da = query
 
 if st.button('search'):
     message = 'Wait for it...'
