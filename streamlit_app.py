@@ -1,40 +1,71 @@
-import altair as alt
-import numpy as np
-import pandas as pd
 import streamlit as st
+from PIL import Image
+from docarray import DocumentArray, Document
+import json
+import requests
+from jina import Client
 
-"""
-# Welcome to Streamlit!
 
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:.
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+client = Client(host='grpcs://1f51c9f5b1.wolf.jina.ai')
+st.title('CLIP Search demo')
 
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
 
-num_points = st.slider("Number of points in spiral", 1, 10000, 1100)
-num_turns = st.slider("Number of turns in spiral", 1, 300, 31)
 
-indices = np.linspace(0, 1, num_points)
-theta = 2 * np.pi * num_turns * indices
-radius = indices
+def display_results(results):
+    st.write('Search results:')
+    cols = st.columns(2)
 
-x = radius * np.cos(theta)
-y = radius * np.sin(theta)
+    for k, m in enumerate(results):
+        image_id = m.id
+        image_url = 'https://open-images-dataset.s3.amazonaws.com/' + image_id
 
-df = pd.DataFrame({
-    "x": x,
-    "y": y,
-    "idx": indices,
-    "rand": np.random.randn(num_points),
-})
+        col_id = 0 if k % 2 == 0 else 1
 
-st.altair_chart(alt.Chart(df, height=700, width=700)
-    .mark_point(filled=True)
-    .encode(
-        x=alt.X("x", axis=None),
-        y=alt.Y("y", axis=None),
-        color=alt.Color("idx", legend=None, scale=alt.Scale()),
-        size=alt.Size("rand", legend=None, scale=alt.Scale(range=[1, 150])),
-    ))
+        with cols[col_id]:
+            score = m.scores['cosine'].value
+            similarity = 1 - score
+            st.markdown(f'Top: [{k+1}] Similarity: ({similarity:.3f}) {image_id}')
+            print(image_url)
+            cols[col_id].image(image_url)
+
+    # data = [[r.text, st.image(), r.scores['cosine'].value] for r in results]
+    # df = pd.DataFrame(
+    # data,
+    # columns=('caption', 'uri', 'score'))
+
+    # st.table(df)
+
+
+def search(query_da):
+    res = client.post('/search', query_da)
+    # for item in res[0].matches:
+    #     print(item.id, item.uri)
+    result = res[0].matches[:10]
+    display_results(result)
+
+
+menu = ['Text', 'Image']
+choice = st.sidebar.selectbox('Select The Input Modality: ',menu)
+
+if choice == 'Image':
+    st.subheader('Image-Image Search')
+    image_file = st.file_uploader('Upload Query Image', type=["png", "jpg", "jpeg"])
+
+    if image_file is not None:
+        img = image_file.getvalue()
+        st.image(Image.open(image_file), width=250)
+
+        query_da = DocumentArray([Document(text='query_img', blob=img)])
+
+elif choice == 'Text':
+    st.subheader('Text-Image Search')
+    query = st.text_input('Text Query', placeholder='Type your query here...')
+
+    query_da = DocumentArray([Document(text=query)])
+
+
+if st.button('search'):
+    message = 'Wait for it...'
+
+    with st.spinner(message):
+        search(query_da)
