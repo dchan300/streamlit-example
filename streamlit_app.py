@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-st.title('CLIP Search demo')
+st.title('MongoDB Atlas Keyword-/Semantic-/Hybrid-Search Demo')
 
 
 def display_results(results):
